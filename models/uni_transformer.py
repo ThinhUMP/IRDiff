@@ -5,12 +5,28 @@ import torch.nn.functional as F
 from torch_geometric.nn import radius_graph, knn_graph
 from torch_scatter import scatter_softmax, scatter_sum
 
-from models.common import GaussianSmearing, MLP, batch_hybrid_edge_connection, outer_product
+from models.common import (
+    GaussianSmearing,
+    MLP,
+    batch_hybrid_edge_connection,
+    outer_product,
+)
 
 
 class BaseX2HAttLayer(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_heads, edge_feat_dim, r_feat_dim,
-                 act_fn='relu', norm=True, ew_net_type='r', out_fc=True):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        output_dim,
+        n_heads,
+        edge_feat_dim,
+        r_feat_dim,
+        act_fn="relu",
+        norm=True,
+        ew_net_type="r",
+        out_fc=True,
+    ):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -23,18 +39,24 @@ class BaseX2HAttLayer(nn.Module):
         self.out_fc = out_fc
 
         kv_input_dim = input_dim * 2 + edge_feat_dim + r_feat_dim
-        self.hk_func = MLP(kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn)
+        self.hk_func = MLP(
+            kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn
+        )
 
-        self.hv_func = MLP(kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn)
+        self.hv_func = MLP(
+            kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn
+        )
 
         self.hq_func = MLP(input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn)
-        if ew_net_type == 'r':
+        if ew_net_type == "r":
             self.ew_net = nn.Sequential(nn.Linear(r_feat_dim, 1), nn.Sigmoid())
-        elif ew_net_type == 'm':
+        elif ew_net_type == "m":
             self.ew_net = nn.Sequential(nn.Linear(output_dim, 1), nn.Sigmoid())
 
         if self.out_fc:
-            self.node_output = MLP(2 * hidden_dim, hidden_dim, hidden_dim, norm=norm, act_fn=act_fn)
+            self.node_output = MLP(
+                2 * hidden_dim, hidden_dim, hidden_dim, norm=norm, act_fn=act_fn
+            )
 
     def forward(self, h, r_feat, edge_feat, edge_index, e_w=None):
         N = h.size(0)
@@ -45,24 +67,27 @@ class BaseX2HAttLayer(nn.Module):
         if edge_feat is not None:
             kv_input = torch.cat([edge_feat, kv_input], -1)
 
-        k = self.hk_func(kv_input).view(-1, self.n_heads, self.output_dim // self.n_heads)
+        k = self.hk_func(kv_input).view(
+            -1, self.n_heads, self.output_dim // self.n_heads
+        )
         v = self.hv_func(kv_input)
 
-        if self.ew_net_type == 'r':
+        if self.ew_net_type == "r":
             e_w = self.ew_net(r_feat)
-        elif self.ew_net_type == 'm':
-            e_w = self.ew_net(v[..., :self.hidden_dim])
+        elif self.ew_net_type == "m":
+            e_w = self.ew_net(v[..., : self.hidden_dim])
         elif e_w is not None:
             e_w = e_w.view(-1, 1)
         else:
-            e_w = 1.
+            e_w = 1.0
         v = v * e_w
         v = v.view(-1, self.n_heads, self.output_dim // self.n_heads)
 
         q = self.hq_func(h).view(-1, self.n_heads, self.output_dim // self.n_heads)
 
-        alpha = scatter_softmax((q[dst] * k / np.sqrt(k.shape[-1])).sum(-1), dst, dim=0,
-                                dim_size=N)
+        alpha = scatter_softmax(
+            (q[dst] * k / np.sqrt(k.shape[-1])).sum(-1), dst, dim=0, dim_size=N
+        )
 
         m = alpha.unsqueeze(-1) * v
         output = scatter_sum(m, dst, dim=0, dim_size=N)
@@ -75,8 +100,18 @@ class BaseX2HAttLayer(nn.Module):
 
 
 class BaseH2XAttLayer(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_heads, edge_feat_dim, r_feat_dim,
-                 act_fn='relu', norm=True, ew_net_type='r'):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        output_dim,
+        n_heads,
+        edge_feat_dim,
+        r_feat_dim,
+        act_fn="relu",
+        norm=True,
+        ew_net_type="r",
+    ):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -89,10 +124,14 @@ class BaseH2XAttLayer(nn.Module):
 
         kv_input_dim = input_dim * 2 + edge_feat_dim + r_feat_dim
 
-        self.xk_func = MLP(kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn)
-        self.xv_func = MLP(kv_input_dim, self.n_heads, hidden_dim, norm=norm, act_fn=act_fn)
+        self.xk_func = MLP(
+            kv_input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn
+        )
+        self.xv_func = MLP(
+            kv_input_dim, self.n_heads, hidden_dim, norm=norm, act_fn=act_fn
+        )
         self.xq_func = MLP(input_dim, output_dim, hidden_dim, norm=norm, act_fn=act_fn)
-        if ew_net_type == 'r':
+        if ew_net_type == "r":
             self.ew_net = nn.Sequential(nn.Linear(r_feat_dim, 1), nn.Sigmoid())
 
     def forward(self, h, rel_x, r_feat, edge_feat, edge_index, e_w=None):
@@ -104,22 +143,26 @@ class BaseH2XAttLayer(nn.Module):
         if edge_feat is not None:
             kv_input = torch.cat([edge_feat, kv_input], -1)
 
-        k = self.xk_func(kv_input).view(-1, self.n_heads, self.output_dim // self.n_heads)
+        k = self.xk_func(kv_input).view(
+            -1, self.n_heads, self.output_dim // self.n_heads
+        )
         v = self.xv_func(kv_input)
-        if self.ew_net_type == 'r':
+        if self.ew_net_type == "r":
             e_w = self.ew_net(r_feat)
-        elif self.ew_net_type == 'm':
-            e_w = 1.
+        elif self.ew_net_type == "m":
+            e_w = 1.0
         elif e_w is not None:
             e_w = e_w.view(-1, 1)
         else:
-            e_w = 1.
+            e_w = 1.0
         v = v * e_w
 
         v = v.unsqueeze(-1) * rel_x.unsqueeze(1)  # (xi - xj) [n_edges, n_heads, 3]
         q = self.xq_func(h).view(-1, self.n_heads, self.output_dim // self.n_heads)
 
-        alpha = scatter_softmax((q[dst] * k / np.sqrt(k.shape[-1])).sum(-1), dst, dim=0, dim_size=N)  # (E, heads)
+        alpha = scatter_softmax(
+            (q[dst] * k / np.sqrt(k.shape[-1])).sum(-1), dst, dim=0, dim_size=N
+        )  # (E, heads)
 
         m = alpha.unsqueeze(-1) * v
         output = scatter_sum(m, dst, dim=0, dim_size=N)
@@ -127,9 +170,23 @@ class BaseH2XAttLayer(nn.Module):
 
 
 class AttentionLayerO2TwoUpdateNodeGeneral(nn.Module):
-    def __init__(self, hidden_dim, n_heads, num_r_gaussian, edge_feat_dim, act_fn='relu', norm=True,
-                 num_x2h=1, num_h2x=1, r_min=0., r_max=10., num_node_types=8,
-                 ew_net_type='r', x2h_out_fc=True, sync_twoup=False):
+    def __init__(
+        self,
+        hidden_dim,
+        n_heads,
+        num_r_gaussian,
+        edge_feat_dim,
+        act_fn="relu",
+        norm=True,
+        num_x2h=1,
+        num_h2x=1,
+        r_min=0.0,
+        r_max=10.0,
+        num_node_types=8,
+        ew_net_type="r",
+        x2h_out_fc=True,
+        sync_twoup=False,
+    ):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.n_heads = n_heads
@@ -145,23 +202,40 @@ class AttentionLayerO2TwoUpdateNodeGeneral(nn.Module):
         self.x2h_out_fc = x2h_out_fc
         self.sync_twoup = sync_twoup
 
-        self.distance_expansion = GaussianSmearing(self.r_min, self.r_max, num_gaussians=num_r_gaussian)
+        self.distance_expansion = GaussianSmearing(
+            self.r_min, self.r_max, num_gaussians=num_r_gaussian
+        )
 
         self.x2h_layers = nn.ModuleList()
         for i in range(self.num_x2h):
             self.x2h_layers.append(
-                BaseX2HAttLayer(hidden_dim, hidden_dim, hidden_dim, n_heads, edge_feat_dim,
-                                r_feat_dim=num_r_gaussian * 4,
-                                act_fn=act_fn, norm=norm,
-                                ew_net_type=self.ew_net_type, out_fc=self.x2h_out_fc)
+                BaseX2HAttLayer(
+                    hidden_dim,
+                    hidden_dim,
+                    hidden_dim,
+                    n_heads,
+                    edge_feat_dim,
+                    r_feat_dim=num_r_gaussian * 4,
+                    act_fn=act_fn,
+                    norm=norm,
+                    ew_net_type=self.ew_net_type,
+                    out_fc=self.x2h_out_fc,
+                )
             )
         self.h2x_layers = nn.ModuleList()
         for i in range(self.num_h2x):
             self.h2x_layers.append(
-                BaseH2XAttLayer(hidden_dim, hidden_dim, hidden_dim, n_heads, edge_feat_dim,
-                                r_feat_dim=num_r_gaussian * 4,
-                                act_fn=act_fn, norm=norm,
-                                ew_net_type=self.ew_net_type)
+                BaseH2XAttLayer(
+                    hidden_dim,
+                    hidden_dim,
+                    hidden_dim,
+                    n_heads,
+                    edge_feat_dim,
+                    r_feat_dim=num_r_gaussian * 4,
+                    act_fn=act_fn,
+                    norm=norm,
+                    ew_net_type=self.ew_net_type,
+                )
             )
 
     def forward(self, h, x, edge_attr, edge_index, mask_ligand, e_w=None, fix_x=False):
@@ -186,9 +260,13 @@ class AttentionLayerO2TwoUpdateNodeGeneral(nn.Module):
         for i in range(self.num_h2x):
             dist_feat = self.distance_expansion(dist)
             dist_feat = outer_product(edge_attr, dist_feat)
-            delta_x = self.h2x_layers[i](new_h, rel_x, dist_feat, edge_feat, edge_index, e_w=e_w)
+            delta_x = self.h2x_layers[i](
+                new_h, rel_x, dist_feat, edge_feat, edge_index, e_w=e_w
+            )
             if not fix_x:
-                x = x + delta_x * mask_ligand[:, None]  # only ligand positions will be updated
+                x = (
+                    x + delta_x * mask_ligand[:, None]
+                )  # only ligand positions will be updated
             rel_x = x[dst] - x[src]
             dist = torch.norm(rel_x, p=2, dim=-1, keepdim=True)
 
@@ -196,10 +274,28 @@ class AttentionLayerO2TwoUpdateNodeGeneral(nn.Module):
 
 
 class UniTransformerO2TwoUpdateGeneral(nn.Module):
-    def __init__(self, num_blocks, num_layers, hidden_dim, n_heads=1, k=32,
-                 num_r_gaussian=50, edge_feat_dim=0, num_node_types=8, act_fn='relu', norm=True,
-                 cutoff_mode='radius', ew_net_type='r',
-                 num_init_x2h=1, num_init_h2x=0, num_x2h=1, num_h2x=1, r_max=10., x2h_out_fc=True, sync_twoup=False):
+    def __init__(
+        self,
+        num_blocks,
+        num_layers,
+        hidden_dim,
+        n_heads=1,
+        k=32,
+        num_r_gaussian=50,
+        edge_feat_dim=0,
+        num_node_types=8,
+        act_fn="relu",
+        norm=True,
+        cutoff_mode="radius",
+        ew_net_type="r",
+        num_init_x2h=1,
+        num_init_h2x=0,
+        num_x2h=1,
+        num_h2x=1,
+        r_max=10.0,
+        x2h_out_fc=True,
+        sync_twoup=False,
+    ):
         super().__init__()
         # Build the network
         self.num_blocks = num_blocks
@@ -222,25 +318,39 @@ class UniTransformerO2TwoUpdateGeneral(nn.Module):
         self.r_max = r_max
         self.x2h_out_fc = x2h_out_fc
         self.sync_twoup = sync_twoup
-        self.distance_expansion = GaussianSmearing(0., r_max, num_gaussians=num_r_gaussian)
-        if self.ew_net_type == 'global':
+        self.distance_expansion = GaussianSmearing(
+            0.0, r_max, num_gaussians=num_r_gaussian
+        )
+        if self.ew_net_type == "global":
             self.edge_pred_layer = MLP(num_r_gaussian, 1, hidden_dim)
 
         self.init_h_emb_layer = self._build_init_h_layer()
         self.base_block = self._build_share_blocks()
 
     def __repr__(self):
-        return f'UniTransformerO2(num_blocks={self.num_blocks}, num_layers={self.num_layers}, n_heads={self.n_heads}, ' \
-               f'act_fn={self.act_fn}, norm={self.norm}, cutoff_mode={self.cutoff_mode}, ew_net_type={self.ew_net_type}, ' \
-               f'init h emb: {self.init_h_emb_layer.__repr__()} \n' \
-               f'base block: {self.base_block.__repr__()} \n' \
-               f'edge pred layer: {self.edge_pred_layer.__repr__() if hasattr(self, "edge_pred_layer") else "None"}) '
+        return (
+            f"UniTransformerO2(num_blocks={self.num_blocks}, num_layers={self.num_layers}, n_heads={self.n_heads}, "
+            f"act_fn={self.act_fn}, norm={self.norm}, cutoff_mode={self.cutoff_mode}, ew_net_type={self.ew_net_type}, "
+            f"init h emb: {self.init_h_emb_layer.__repr__()} \n"
+            f"base block: {self.base_block.__repr__()} \n"
+            f'edge pred layer: {self.edge_pred_layer.__repr__() if hasattr(self, "edge_pred_layer") else "None"}) '
+        )
 
     def _build_init_h_layer(self):
         layer = AttentionLayerO2TwoUpdateNodeGeneral(
-            self.hidden_dim, self.n_heads, self.num_r_gaussian, self.edge_feat_dim, act_fn=self.act_fn, norm=self.norm,
-            num_x2h=self.num_init_x2h, num_h2x=self.num_init_h2x, r_max=self.r_max, num_node_types=self.num_node_types,
-            ew_net_type=self.ew_net_type, x2h_out_fc=self.x2h_out_fc, sync_twoup=self.sync_twoup,
+            self.hidden_dim,
+            self.n_heads,
+            self.num_r_gaussian,
+            self.edge_feat_dim,
+            act_fn=self.act_fn,
+            norm=self.norm,
+            num_x2h=self.num_init_x2h,
+            num_h2x=self.num_init_h2x,
+            r_max=self.r_max,
+            num_node_types=self.num_node_types,
+            ew_net_type=self.ew_net_type,
+            x2h_out_fc=self.x2h_out_fc,
+            sync_twoup=self.sync_twoup,
         )
         return layer
 
@@ -248,24 +358,34 @@ class UniTransformerO2TwoUpdateGeneral(nn.Module):
         base_block = []
         for l_idx in range(self.num_layers):
             layer = AttentionLayerO2TwoUpdateNodeGeneral(
-                self.hidden_dim, self.n_heads, self.num_r_gaussian, self.edge_feat_dim, act_fn=self.act_fn,
+                self.hidden_dim,
+                self.n_heads,
+                self.num_r_gaussian,
+                self.edge_feat_dim,
+                act_fn=self.act_fn,
                 norm=self.norm,
-                num_x2h=self.num_x2h, num_h2x=self.num_h2x, r_max=self.r_max, num_node_types=self.num_node_types,
-                ew_net_type=self.ew_net_type, x2h_out_fc=self.x2h_out_fc, sync_twoup=self.sync_twoup,
+                num_x2h=self.num_x2h,
+                num_h2x=self.num_h2x,
+                r_max=self.r_max,
+                num_node_types=self.num_node_types,
+                ew_net_type=self.ew_net_type,
+                x2h_out_fc=self.x2h_out_fc,
+                sync_twoup=self.sync_twoup,
             )
             base_block.append(layer)
         return nn.ModuleList(base_block)
 
     def _connect_edge(self, x, mask_ligand, batch):
-        if self.cutoff_mode == 'radius':
-            edge_index = radius_graph(x, r=self.r, batch=batch, flow='source_to_target')
-        elif self.cutoff_mode == 'knn':
-            edge_index = knn_graph(x, k=self.k, batch=batch, flow='source_to_target')
-        elif self.cutoff_mode == 'hybrid':
+        if self.cutoff_mode == "radius":
+            edge_index = radius_graph(x, r=self.r, batch=batch, flow="source_to_target")
+        elif self.cutoff_mode == "knn":
+            edge_index = knn_graph(x, k=self.k, batch=batch, flow="source_to_target")
+        elif self.cutoff_mode == "hybrid":
             edge_index = batch_hybrid_edge_connection(
-                x, k=self.k, mask_ligand=mask_ligand, batch=batch, add_p_index=True)
+                x, k=self.k, mask_ligand=mask_ligand, batch=batch, add_p_index=True
+            )
         else:
-            raise ValueError(f'Not supported cutoff mode: {self.cutoff_mode}')
+            raise ValueError(f"Not supported cutoff mode: {self.cutoff_mode}")
         return edge_index
 
     @staticmethod
@@ -291,7 +411,7 @@ class UniTransformerO2TwoUpdateGeneral(nn.Module):
             src, dst = edge_index
 
             edge_type = self._build_edge_type(edge_index, mask_ligand)
-            if self.ew_net_type == 'global':
+            if self.ew_net_type == "global":
                 dist = torch.norm(x[dst] - x[src], p=2, dim=-1, keepdim=True)
                 dist_feat = self.distance_expansion(dist)
                 logits = self.edge_pred_layer(dist_feat)
@@ -300,11 +420,13 @@ class UniTransformerO2TwoUpdateGeneral(nn.Module):
                 e_w = None
 
             for l_idx, layer in enumerate(self.base_block):
-                h, x = layer(h, x, edge_type, edge_index, mask_ligand, e_w=e_w, fix_x=fix_x)
+                h, x = layer(
+                    h, x, edge_type, edge_index, mask_ligand, e_w=e_w, fix_x=fix_x
+                )
             all_x.append(x)
             all_h.append(h)
 
-        outputs = {'x': x, 'h': h}
+        outputs = {"x": x, "h": h}
         if return_all:
-            outputs.update({'all_x': all_x, 'all_h': all_h})
+            outputs.update({"all_x": all_x, "all_h": all_h})
         return outputs

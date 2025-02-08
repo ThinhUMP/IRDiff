@@ -45,19 +45,18 @@ class RetAugmentationLinearAttention(nn.Module):
 
 
 class CrossAttention(nn.Module):
-    def __init__(self, query_dim, context_dim=None, inner_dim=256, dropout=0.):
+    def __init__(self, query_dim, context_dim=None, inner_dim=256, dropout=0.0):
         super().__init__()
         context_dim = default(context_dim, query_dim)
 
-        self.scale = inner_dim ** -0.5
+        self.scale = inner_dim**-0.5
 
         self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
         self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
 
         self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, query_dim),
-            nn.Dropout(dropout)
+            nn.Linear(inner_dim, query_dim), nn.Dropout(dropout)
         )
 
     def forward(self, x, context=None, mask=None):
@@ -66,15 +65,15 @@ class CrossAttention(nn.Module):
         k = self.to_k(context)
         v = self.to_v(context)
 
-        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
+        sim = einsum("b i d, b j d -> b i j", q, k) * self.scale
 
         if exists(mask):
-            mask = rearrange(mask, 'b ... -> b (...)')
+            mask = rearrange(mask, "b ... -> b (...)")
             max_neg_value = -torch.finfo(sim.dtype).max
-            mask = repeat(mask, 'b j -> b () j')
+            mask = repeat(mask, "b j -> b () j")
             sim.masked_fill_(~mask, max_neg_value)
 
         attn = sim.softmax(dim=-1)
 
-        out = einsum('b i j, b j d -> b i d', attn, v)
+        out = einsum("b i j, b j d -> b i d", attn, v)
         return self.to_out(out) + x

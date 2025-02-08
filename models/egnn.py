@@ -3,14 +3,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_scatter import scatter_sum
 from torch_geometric.nn import radius_graph, knn_graph
-from models.common import GaussianSmearing, MLP, batch_hybrid_edge_connection, NONLINEARITIES
+from models.common import (
+    GaussianSmearing,
+    MLP,
+    batch_hybrid_edge_connection,
+    NONLINEARITIES,
+)
 
 
 class EnBaseLayer(nn.Module):
-    def __init__(self, hidden_dim, edge_feat_dim, num_r_gaussian, update_x=True, act_fn='silu', norm=False):
+    def __init__(
+        self,
+        hidden_dim,
+        edge_feat_dim,
+        num_r_gaussian,
+        update_x=True,
+        act_fn="silu",
+        norm=False,
+    ):
         super().__init__()
-        self.r_min = 0.
-        self.r_max = 10.
+        self.r_min = 0.0
+        self.r_max = 10.0
         self.hidden_dim = hidden_dim
         self.num_r_gaussian = num_r_gaussian
         self.edge_feat_dim = edge_feat_dim
@@ -18,9 +31,18 @@ class EnBaseLayer(nn.Module):
         self.act_fn = act_fn
         self.norm = norm
         if num_r_gaussian > 1:
-            self.distance_expansion = GaussianSmearing(self.r_min, self.r_max, num_gaussians=num_r_gaussian)
-        self.edge_mlp = MLP(2 * hidden_dim + edge_feat_dim + num_r_gaussian, hidden_dim, hidden_dim,
-                            num_layer=2, norm=norm, act_fn=act_fn, act_last=True)
+            self.distance_expansion = GaussianSmearing(
+                self.r_min, self.r_max, num_gaussians=num_r_gaussian
+            )
+        self.edge_mlp = MLP(
+            2 * hidden_dim + edge_feat_dim + num_r_gaussian,
+            hidden_dim,
+            hidden_dim,
+            num_layer=2,
+            norm=norm,
+            act_fn=act_fn,
+            act_last=True,
+        )
         self.edge_inf = nn.Sequential(nn.Linear(hidden_dim, 1), nn.Sigmoid())
         if self.update_x:
             x_mlp = [nn.Linear(hidden_dim, hidden_dim), NONLINEARITIES[act_fn]]
@@ -30,13 +52,20 @@ class EnBaseLayer(nn.Module):
             x_mlp.append(nn.Tanh())
             self.x_mlp = nn.Sequential(*x_mlp)
 
-        self.node_mlp = MLP(2 * hidden_dim, hidden_dim, hidden_dim, num_layer=2, norm=norm, act_fn=act_fn)
+        self.node_mlp = MLP(
+            2 * hidden_dim,
+            hidden_dim,
+            hidden_dim,
+            num_layer=2,
+            norm=norm,
+            act_fn=act_fn,
+        )
 
     def forward(self, h, x, edge_index, mask_ligand, edge_attr=None):
         src, dst = edge_index
         hi, hj = h[dst], h[src]
         rel_x = x[dst] - x[src]
-        d_sq = torch.sum(rel_x ** 2, -1, keepdim=True)
+        d_sq = torch.sum(rel_x**2, -1, keepdim=True)
         if self.num_r_gaussian > 1:
             d_feat = self.distance_expansion(torch.sqrt(d_sq + 1e-8))
         else:
@@ -53,15 +82,28 @@ class EnBaseLayer(nn.Module):
         h = h + self.node_mlp(torch.cat([mi, h], -1))
         if self.update_x:
             xi, xj = x[dst], x[src]
-            delta_x = scatter_sum((xi - xj) / (torch.sqrt(d_sq + 1e-8) + 1) * self.x_mlp(mij), dst, dim=0)
+            delta_x = scatter_sum(
+                (xi - xj) / (torch.sqrt(d_sq + 1e-8) + 1) * self.x_mlp(mij), dst, dim=0
+            )
             x = x + delta_x * mask_ligand[:, None]
 
         return h, x
 
 
 class EGNN(nn.Module):
-    def __init__(self, num_layers, hidden_dim, edge_feat_dim, num_r_gaussian, k=32, cutoff=10.0, cutoff_mode='knn',
-                 update_x=True, act_fn='silu', norm=False):
+    def __init__(
+        self,
+        num_layers,
+        hidden_dim,
+        edge_feat_dim,
+        num_r_gaussian,
+        k=32,
+        cutoff=10.0,
+        cutoff_mode="knn",
+        update_x=True,
+        act_fn="silu",
+        norm=False,
+    ):
         super().__init__()
         self.num_layers = num_layers
         self.hidden_dim = hidden_dim
@@ -73,25 +115,34 @@ class EGNN(nn.Module):
         self.k = k
         self.cutoff = cutoff
         self.cutoff_mode = cutoff_mode
-        self.distance_expansion = GaussianSmearing(stop=cutoff, num_gaussians=num_r_gaussian)
+        self.distance_expansion = GaussianSmearing(
+            stop=cutoff, num_gaussians=num_r_gaussian
+        )
         self.net = self._build_network()
 
     def _build_network(self):
         layers = []
         for l_idx in range(self.num_layers):
-            layer = EnBaseLayer(self.hidden_dim, self.edge_feat_dim, self.num_r_gaussian,
-                                update_x=self.update_x, act_fn=self.act_fn, norm=self.norm)
+            layer = EnBaseLayer(
+                self.hidden_dim,
+                self.edge_feat_dim,
+                self.num_r_gaussian,
+                update_x=self.update_x,
+                act_fn=self.act_fn,
+                norm=self.norm,
+            )
             layers.append(layer)
         return nn.ModuleList(layers)
 
     def _connect_edge(self, x, mask_ligand, batch):
-        if self.cutoff_mode == 'knn':
-            edge_index = knn_graph(x, k=self.k, batch=batch, flow='source_to_target')
-        elif self.cutoff_mode == 'hybrid':
+        if self.cutoff_mode == "knn":
+            edge_index = knn_graph(x, k=self.k, batch=batch, flow="source_to_target")
+        elif self.cutoff_mode == "hybrid":
             edge_index = batch_hybrid_edge_connection(
-                x, k=self.k, mask_ligand=mask_ligand, batch=batch, add_p_index=True)
+                x, k=self.k, mask_ligand=mask_ligand, batch=batch, add_p_index=True
+            )
         else:
-            raise ValueError(f'Not supported cutoff mode: {self.cutoff_mode}')
+            raise ValueError(f"Not supported cutoff mode: {self.cutoff_mode}")
         return edge_index
 
     @staticmethod
@@ -116,7 +167,7 @@ class EGNN(nn.Module):
             h, x = layer(h, x, edge_index, mask_ligand, edge_attr=edge_type)
             all_x.append(x)
             all_h.append(h)
-        outputs = {'x': x, 'h': h}
+        outputs = {"x": x, "h": h}
         if return_all:
-            outputs.update({'all_x': all_x, 'all_h': all_h})
+            outputs.update({"all_x": all_x, "all_h": all_h})
         return outputs

@@ -10,26 +10,28 @@ from .pl_data import ProteinLigandData, torchify_dict
 
 class PocketLigandPairDataset(Dataset):
 
-    def __init__(self, raw_path, transform=None, version='final'):
+    def __init__(self, raw_path, transform=None, version="final"):
         super().__init__()
-        self.raw_path = raw_path.rstrip('/')
-        self.index_path = os.path.join(self.raw_path, 'index.pkl')
-        self.processed_path = os.path.join(os.path.dirname(self.raw_path),
-                                           os.path.basename(self.raw_path) + f'_pocket10_processed_{version}.lmdb')
+        self.raw_path = raw_path.rstrip("/")
+        self.index_path = os.path.join(self.raw_path, "index.pkl")
+        self.processed_path = os.path.join(
+            os.path.dirname(self.raw_path),
+            os.path.basename(self.raw_path) + f"_pocket10_processed_{version}.lmdb",
+        )
         self.transform = transform
         self.db = None
 
         self.keys = None
 
         if not os.path.exists(self.processed_path):
-            print(f'{self.processed_path} does not exist, begin processing data')
+            print(f"{self.processed_path} does not exist, begin processing data")
             self._process()
 
     def _connect_db(self):
         """
-            Establish read-only database connection
+        Establish read-only database connection
         """
-        assert self.db is None, 'A connection has already been opened.'
+        assert self.db is None, "A connection has already been opened."
         self.db = lmdb.open(
             self.processed_path,
             map_size=10 * (1024 * 1024 * 1024),  # 10GB
@@ -56,17 +58,20 @@ class PocketLigandPairDataset(Dataset):
             subdir=False,
             readonly=False,  # Writable
         )
-        with open(self.index_path, 'rb') as f:
+        with open(self.index_path, "rb") as f:
             index = pickle.load(f)
 
         num_skipped = 0
         with db.begin(write=True, buffers=True) as txn:
             for i, (pocket_fn, ligand_fn, *_) in enumerate(tqdm(index)):
-                if pocket_fn is None: continue
+                if pocket_fn is None:
+                    continue
                 try:
                     # data_prefix = '/data/work/jiaqi/binding_affinity'
                     data_prefix = self.raw_path
-                    pocket_dict = PDBProtein(os.path.join(data_prefix, pocket_fn)).to_dict_atom()
+                    pocket_dict = PDBProtein(
+                        os.path.join(data_prefix, pocket_fn)
+                    ).to_dict_atom()
                     ligand_dict = parse_sdf_file(os.path.join(data_prefix, ligand_fn))
                     data = ProteinLigandData.from_protein_ligand_dicts(
                         protein_dict=torchify_dict(pocket_dict),
@@ -75,13 +80,16 @@ class PocketLigandPairDataset(Dataset):
                     data.protein_filename = pocket_fn
                     data.ligand_filename = ligand_fn
                     data = data.to_dict()  # avoid torch_geometric version issue
-                    txn.put(
-                        key=str(i).encode(),
-                        value=pickle.dumps(data)
-                    )
+                    txn.put(key=str(i).encode(), value=pickle.dumps(data))
                 except:
                     num_skipped += 1
-                    print('Skipping (%d) %s' % (num_skipped, ligand_fn,))
+                    print(
+                        "Skipping (%d) %s"
+                        % (
+                            num_skipped,
+                            ligand_fn,
+                        )
+                    )
                     continue
         db.close()
 
@@ -107,11 +115,11 @@ class PocketLigandPairDataset(Dataset):
         return data
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', type=str)
+    parser.add_argument("path", type=str)
     args = parser.parse_args()
 
     dataset = PocketLigandPairDataset(args.path)
