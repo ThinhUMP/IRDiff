@@ -2,6 +2,13 @@ import argparse
 import os
 import torch
 from tqdm.auto import tqdm
+
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 from utils.evaluation.docking_qvina import QVinaDockingTask
 from utils.evaluation.docking_vina import VinaDockingTask
 import multiprocessing as mp
@@ -46,7 +53,9 @@ def dock_pocket_samples(pocket_samples):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("sample_path", type=str)
+    parser.add_argument(
+        "--sample_path", type=str, default="./sampled_results/result_1.pt"
+    )
     parser.add_argument("-o", "--out", type=str, default=None)
     parser.add_argument("-n", "--num_processes", type=int, default=10)
     parser.add_argument(

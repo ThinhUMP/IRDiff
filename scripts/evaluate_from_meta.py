@@ -7,6 +7,12 @@ import torch
 from tqdm.auto import tqdm
 from copy import deepcopy
 
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 from utils import misc
 from utils.evaluation import scoring_func
 from utils.evaluation.docking_qvina import QVinaDockingTask
@@ -101,7 +107,7 @@ def eval_single_datapoint(index, id, args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "meta_file", type=str
+        "--meta_file", type=str, default="./sampled_results/"
     )  # 'sampling_results/targetdiff_vina_docked.pt'
     parser.add_argument("-n", "--eval_num_examples", type=int, default=100)
     parser.add_argument("--verbose", type=eval, default=False)
@@ -116,7 +122,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--exhaustiveness", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--result_path", type=str, required=True)
+    parser.add_argument(
+        "--result_path",
+        type=str,
+        required=True,
+    )  # required=True,
     parser.add_argument("--aggregate_meta", type=eval, default=False)
     args = parser.parse_args()
 

@@ -9,6 +9,12 @@ from tqdm.auto import tqdm
 from glob import glob
 from collections import Counter
 
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 from utils.evaluation import eval_atom_type, scoring_func, analyze, eval_bond_length
 from utils import misc, reconstruct, transforms
 from utils.evaluation.docking_qvina import QVinaDockingTask
@@ -34,7 +40,7 @@ def print_ring_ratio(all_ring_sizes, logger):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("sample_path", type=str)
+    parser.add_argument("--sample_path", type=str, default="./sampled_results/")
     parser.add_argument("--verbose", type=eval, default=False)
     parser.add_argument("--eval_step", type=int, default=-1)
     parser.add_argument("--eval_num_examples", type=int, default=None)

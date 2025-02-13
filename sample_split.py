@@ -203,7 +203,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test_prompt_indices_path",
         type=str,
-        default=root_dir + "/src/test_prompt_ligand_indices.pt",
+        default=root_dir + "/src/test_prompt_ligand_indices_top3.pt",
     )
     parser.add_argument("--start_index", type=int, default=0)
     parser.add_argument("--end_index", type=int, default=99)

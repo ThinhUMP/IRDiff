@@ -4,6 +4,13 @@ import os
 from rdkit import Chem
 import torch
 from tqdm.auto import tqdm
+
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 from utils import misc
 from utils.evaluation import scoring_func
 from utils.evaluation.docking_qvina import QVinaDockingTask

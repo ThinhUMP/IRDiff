@@ -6,6 +6,12 @@ from glob import glob
 import torch
 from torch_geometric.transforms import Compose
 
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 import utils.misc as misc
 import utils.transforms as trans
 from datasets.pl_data import ProteinLigandData, torchify_dict

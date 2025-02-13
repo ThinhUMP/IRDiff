@@ -10,6 +10,12 @@ from torch_geometric.transforms import Compose
 from torch_scatter import scatter_sum, scatter_mean
 from tqdm.auto import tqdm
 
+import sys
+import pathlib
+
+root_dir = str(pathlib.Path(__file__).resolve().parents[1])
+sys.path.append(root_dir)
+
 import utils.misc as misc
 import utils.transforms as trans
 from datasets import get_dataset
