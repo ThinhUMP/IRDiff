@@ -72,9 +72,9 @@ def get_topk_promt_dataset(config, *args, **kwargs):
     test_split_indices = split_indices_dict[
         "test"
     ]  # the 'key' of val_dataset is 'test'
-
     assert name == "pl"
     dataset = PocketLigandPairDataset(root, *args, **kwargs)
+    print(len(dataset), dataset[0])
 
     topk_prompt = config.topk_prompt
     assert topk_prompt in [1, 2, 3]

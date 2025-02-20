@@ -73,23 +73,21 @@ if __name__ == "__main__":
     ligand_featurizer = trans.FeaturizeLigandAtom(
         config.data.transform.ligand_atom_mode
     )
-    print(protein_featurizer.feature_dim)
-    # transform_list = [
-    #     protein_featurizer,
-    #     ligand_featurizer,
-    #     trans.FeaturizeLigandBond(),
-    # ]
-    # if config.data.transform.random_rot:
-    #     transform_list.append(trans.RandomRotation())
-    # transform = Compose(transform_list)
 
-    # logger.info("Loading dataset...")
+    transform_list = [
+        protein_featurizer,
+        ligand_featurizer,
+        trans.FeaturizeLigandBond(),
+    ]
+    if config.data.transform.random_rot:
+        transform_list.append(trans.RandomRotation())
+    transform = Compose(transform_list)
+    logger.info("Loading dataset...")
 
-    # subsets = get_topk_promt_dataset(
-    #     config=config.data,
-    #     transform=transform,
-    # )
-
+    subsets = get_topk_promt_dataset(
+        config=config.data,
+        transform=transform,
+    )
     # topk_prompt = config.data.topk_prompt
 
     # train_set, val_set = subsets["train"], subsets["test"]
