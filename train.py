@@ -73,6 +73,7 @@ if __name__ == "__main__":
     ligand_featurizer = trans.FeaturizeLigandAtom(
         config.data.transform.ligand_atom_mode
     )
+    print(protein_featurizer)
     transform_list = [
         protein_featurizer,
         ligand_featurizer,
