@@ -21,17 +21,17 @@ from easydict import EasyDict
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-d", "--dataset", type=str, default="./data/crossdocked_v1.1_rmsd1.0_pocket10"
+        "-d", "--dataset", type=str, default="./path/to/crossdocked_v1.1_rmsd1.0_pocket10_processed_final.lmdb"
     )
     parser.add_argument(
-        "-s", "--split", type=str, default="./data/crossdocked_pocket10_pose_split.pt"
+        "-s", "--split", type=str, default="./path/to/rossdocked_pocket10_pose_split.pt"
     )
     parser.add_argument("-o", "--out", type=str, default=None)
     parser.add_argument(
-        "--protein_root", type=str, default="./data/crossdocked_v1.1_rmsd1.0"
+        "--protein_root", type=str, default="./path/to/crossdocked_v1.1_rmsd1.0"
     )
     parser.add_argument(
-        "--ligand_root", type=str, default="./data/crossdocked_v1.1_rmsd1.0_pocket10"
+        "--ligand_root", type=str, default="./path/to/rossdocked_v1.1_rmsd1.0_pocket10_processed_final.lmdb"
     )
     parser.add_argument("--use_uff", type=eval, default=True)
     parser.add_argument("--size_factor", type=float, default=1.2)
