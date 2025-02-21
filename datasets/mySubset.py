@@ -40,8 +40,8 @@ class TopKPromptSubset(Dataset[T_co]):
 
     def __init__(self, dataset, indices, prompt_indices, topK) -> None:
         self.dataset = dataset
-        self.indices = indices[0:100]
-        self.prompt_indices = prompt_indices[0:100]
+        self.indices = indices
+        self.prompt_indices = prompt_indices
         self.topK = topK
 
     def __getitem__(self, idx):

@@ -93,7 +93,6 @@ if __name__ == "__main__":
     train_set, val_set = subsets["train"], subsets["test"]
     logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    print(len(train_set))
     # collate_exclude_keys = ["ligand_nbh_list"]
     # train_iterator = utils_train.inf_iterator(
     #     DataLoader(

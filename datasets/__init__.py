@@ -61,20 +61,23 @@ def get_topk_promt_dataset(config, *args, **kwargs):
 
     train_prompt_indices = torch.load(config.train_prompt_path)
     test_prompt_indices = torch.load(config.val_prompt_path)
-
+    print(type(train_prompt_indices), train_prompt_indices.shape)
+    train_prompt_indices = train_prompt_indices[0:100, :]
+    print(type(train_prompt_indices), train_prompt_indices.shape)
+    test_prompt_indices = test_prompt_indices[0:10, :]
     assert (
         train_prompt_indices.shape[1] == test_prompt_indices.shape[1]
     ), "the size of retrieval database is different"
 
     assert "split" in config
     split_indices_dict = torch.load(config.split)
-    train_split_indices = split_indices_dict["train"]
+    train_split_indices = split_indices_dict["train"][:100]
     test_split_indices = split_indices_dict[
         "test"
     ][:10]  # the 'key' of val_dataset is 'test'
     assert name == "pl"
     dataset = PocketLigandPairDataset(root, *args, **kwargs)
-
+    print(len(dataset))
     topk_prompt = config.topk_prompt
     assert topk_prompt in [1, 2, 3]
 
