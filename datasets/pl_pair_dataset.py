@@ -26,7 +26,6 @@ class PocketLigandPairDataset(Dataset):
         if not os.path.exists(self.processed_path):
             print(f"{self.processed_path} does not exist, begin processing data")
             self._process()
-            print('check')
 
     def _connect_db(self):
         """
