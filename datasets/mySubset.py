@@ -50,6 +50,7 @@ class TopKPromptSubset(Dataset[T_co]):
         prompt_2nd_indices = self.prompt_indices[:, -2].numpy().tolist()
         prompt_3rd_indices = self.prompt_indices[:, -3].numpy().tolist()
 
+        print(idx)
         assert self.topK in [1, 2, 3], "only support top{1-3}"
         if self.topK == 1:
             return (

@@ -4,6 +4,7 @@ import shutil
 
 import numpy as np
 import torch
+import pickle
 
 # import torch.utils.tensorboard
 from sklearn.metrics import roc_auc_score
@@ -93,7 +94,23 @@ if __name__ == "__main__":
     train_set, val_set = subsets["train"], subsets["test"]
     logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    print(type(train_set[0][1]))
+    
+    # Save the train_set
+    with open('./path/to/train_set.pkl', 'wb') as f:
+        pickle.dump(train_set, f)
+
+    # Save the val_set
+    with open('./path/to/val_set.pkl', 'wb') as f:
+        pickle.dump(val_set, f)
+    
+    # Load the train_set
+    with open('./path/to/train_set.pkl', 'rb') as f:
+        train_set = pickle.load(f)
+
+    # Load the val_set
+    with open('./path/to/val_set.pkl', 'rb') as f:
+        val_set = pickle.load(f)
+
     # collate_exclude_keys = ["ligand_nbh_list"]
     # train_iterator = utils_train.inf_iterator(
     #     DataLoader(
