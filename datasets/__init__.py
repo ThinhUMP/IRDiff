@@ -61,9 +61,9 @@ def get_topk_promt_dataset(config, *args, **kwargs):
 
     train_prompt_indices = torch.load(config.train_prompt_path)
     test_prompt_indices = torch.load(config.val_prompt_path)
-    print(type(train_prompt_indices), train_prompt_indices.shape)
+
     train_prompt_indices = train_prompt_indices[0:100, :]
-    print(type(train_prompt_indices), train_prompt_indices.shape)
+
     test_prompt_indices = test_prompt_indices[0:10, :]
     assert (
         train_prompt_indices.shape[1] == test_prompt_indices.shape[1]
