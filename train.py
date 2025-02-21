@@ -94,22 +94,20 @@ if __name__ == "__main__":
     train_set, val_set = subsets["train"], subsets["test"]
     logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    print(train_set[0][0])
-    # # Save the train_set
+    print(type(train_set))
+    # Save the train_set
     # with open('./path/to/train_set.pkl', 'wb') as f:
     #     pickle.dump(train_set, f)
+    torch.save(train_set, './path/to/train_set.pt')
 
-    # # Save the val_set
-    # with open('./path/to/val_set.pkl', 'wb') as f:
-    #     pickle.dump(val_set, f)
+    # Save the val_set
+    torch.save(val_set, './path/to/val_set.pt')
     
-    # # Load the train_set
-    # with open('./path/to/train_set.pkl', 'rb') as f:
-    #     train_set = pickle.load(f)
+    # Load the train_set
+    train_set = torch.load('./path/to/train_set.pt')
 
-    # # Load the val_set
-    # with open('./path/to/val_set.pkl', 'rb') as f:
-    #     val_set = pickle.load(f)
+    # Load the val_set
+    val_set = torch.load('./path/to/val_set.pt')
 
     # collate_exclude_keys = ["ligand_nbh_list"]
     # train_iterator = utils_train.inf_iterator(
