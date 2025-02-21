@@ -71,7 +71,7 @@ def get_topk_promt_dataset(config, *args, **kwargs):
     train_split_indices = split_indices_dict["train"]
     test_split_indices = split_indices_dict[
         "test"
-    ]  # the 'key' of val_dataset is 'test'
+    ][:10]  # the 'key' of val_dataset is 'test'
     assert name == "pl"
     dataset = PocketLigandPairDataset(root, *args, **kwargs)
 
