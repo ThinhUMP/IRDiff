@@ -88,11 +88,12 @@ if __name__ == "__main__":
         config=config.data,
         transform=transform,
     )
-    # topk_prompt = config.data.topk_prompt
+    topk_prompt = config.data.topk_prompt
 
-    # train_set, val_set = subsets["train"], subsets["test"]
-    # logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
+    train_set, val_set = subsets["train"], subsets["test"]
+    logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
+    print(len(train_set))
     # collate_exclude_keys = ["ligand_nbh_list"]
     # train_iterator = utils_train.inf_iterator(
     #     DataLoader(
