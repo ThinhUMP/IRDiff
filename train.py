@@ -94,20 +94,6 @@ if __name__ == "__main__":
     train_set, val_set = subsets["train"], subsets["test"]
     logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    # Save the train_set
-    # with open('./path/to/train_set.pkl', 'wb') as f:
-    #     pickle.dump(train_set, f)
-    # torch.save(train_set, './path/to/train_set.pt')
-
-    # # Save the val_set
-    # torch.save(val_set, './path/to/val_set.pt')
-    
-    # # Load the train_set
-    # train_set = torch.load('./path/to/train_set.pt')
-
-    # # Load the val_set
-    # val_set = torch.load('./path/to/val_set.pt')
-
     collate_exclude_keys = ["ligand_nbh_list"]
     train_iterator = utils_train.inf_iterator(
         DataLoader(
@@ -166,7 +152,7 @@ if __name__ == "__main__":
                 raise ValueError(topk_prompt)
 
             gt_protein_pos = batch.protein_pos
-
+            
             results = model.get_diffusion_loss(
                 net_cond=net_cond,
                 protein_pos=gt_protein_pos,
@@ -335,6 +321,7 @@ if __name__ == "__main__":
         for it in range(1, config.train.max_iters + 1):
             # with torch.autograd.detect_anomaly():
             train(it)
+            
             if it % config.train.val_freq == 0 or it == config.train.max_iters:
                 val_loss = validate(it)
                 if best_loss is None or val_loss < best_loss:

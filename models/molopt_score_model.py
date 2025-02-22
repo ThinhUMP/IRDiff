@@ -197,7 +197,7 @@ class SinusoidalPosEmb(nn.Module):
 
 # Model
 class ScorePosNet3D(nn.Module):
-
+    
     def __init__(self, config, protein_atom_feature_dim, ligand_atom_feature_dim):
         super().__init__()
         self.config = config
