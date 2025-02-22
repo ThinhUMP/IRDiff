@@ -53,23 +53,27 @@ if __name__ == "__main__":
     parser.add_argument("--train_report_iter", type=int, default=200)
     args = parser.parse_args()
 
+    # Load configs
     config = misc.load_config(args.config)
     config_name = os.path.basename(args.config)[
         : os.path.basename(args.config).rfind(".")
     ]
     misc.seed_all(config.train.seed)
 
+    # Logging
     log_dir = misc.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)
     ckpt_dir = os.path.join(log_dir, "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
     vis_dir = os.path.join(log_dir, "vis")
     os.makedirs(vis_dir, exist_ok=True)
     logger = misc.get_logger("train", log_dir)
-    logger.info(args)
-    logger.info(config)
+    # logger.info(args)
+    # logger.info(config)
     shutil.copyfile(args.config, os.path.join(log_dir, os.path.basename(args.config)))
     shutil.copytree(root_dir + "/models", os.path.join(log_dir, "models"))
 
+    # -------- start: data preparation --------
+    # Transforms
     protein_featurizer = trans.FeaturizeProteinAtom()
     ligand_featurizer = trans.FeaturizeLigandAtom(
         config.data.transform.ligand_atom_mode
@@ -83,7 +87,11 @@ if __name__ == "__main__":
     if config.data.transform.random_rot:
         transform_list.append(trans.RandomRotation())
     transform = Compose(transform_list)
-    logger.info("Loading dataset...")
+    # -------- end: data preparation --------
+
+    # Datasets and loaders
+    # -------- start: config dataloader --------
+    # logger.info("Loading dataset...")
 
     subsets = get_topk_promt_dataset(
         config=config.data,
@@ -92,28 +100,30 @@ if __name__ == "__main__":
     topk_prompt = config.data.topk_prompt
 
     train_set, val_set = subsets["train"], subsets["test"]
-    logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
+    # logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    print(train_set[0][0].protein_atom_to_aa_type)
-    # collate_exclude_keys = ["ligand_nbh_list"]
-    # train_iterator = utils_train.inf_iterator(
-    #     DataLoader(
-    #         train_set,
-    #         batch_size=config.train.batch_size,
-    #         shuffle=True,
-    #         num_workers=config.train.num_workers,
-    #         follow_batch=FOLLOW_BATCH,
-    #         exclude_keys=collate_exclude_keys,
-    #     )
-    # )
-    # val_loader = DataLoader(
-    #     val_set,
-    #     config.train.val_batch_size,
-    #     shuffle=False,
-    #     follow_batch=FOLLOW_BATCH,
-    #     exclude_keys=collate_exclude_keys,
-    # )
+    collate_exclude_keys = ["ligand_nbh_list"]
+    train_iterator = utils_train.inf_iterator(
+        DataLoader(
+            train_set,
+            batch_size=config.train.batch_size,
+            shuffle=False,
+            num_workers=config.train.num_workers,
+            follow_batch=FOLLOW_BATCH,
+            exclude_keys=collate_exclude_keys,
+        )
+    )
+    val_loader = DataLoader(
+        val_set,
+        config.train.val_batch_size,
+        shuffle=False,
+        follow_batch=FOLLOW_BATCH,
+        exclude_keys=collate_exclude_keys,
+    )
+    # -------- end: config dataloader --------
 
+    # # -------- start: build model --------
+    # # Model
     # logger.info("Building model...")
 
     # net_cond = BAPNet(
@@ -125,15 +135,18 @@ if __name__ == "__main__":
     #     protein_atom_feature_dim=protein_featurizer.feature_dim,
     #     ligand_atom_feature_dim=ligand_featurizer.feature_dim,
     # ).to(args.device)
+    # # -------- end: build model --------
 
     # print(
     #     f"protein feature dim: {protein_featurizer.feature_dim} ligand feature dim: {ligand_featurizer.feature_dim}"
     # )
     # logger.info(f"# trainable parameters: {misc.count_parameters(model) / 1e6:.4f} M")
 
+    # # Optimizer and scheduler
     # optimizer = utils_train.get_optimizer(config.train.optimizer, model)
     # scheduler = utils_train.get_scheduler(config.train.scheduler, optimizer)
 
+    # -------- start: start training --------
     # def train(it):
     #     model.train()
     #     optimizer.zero_grad()
@@ -154,6 +167,7 @@ if __name__ == "__main__":
 
     #         gt_protein_pos = batch.protein_pos
             
+    #         # -------- start: diffusion loss --------
     #         results = model.get_diffusion_loss(
     #             net_cond=net_cond,
     #             protein_pos=gt_protein_pos,
@@ -216,6 +230,7 @@ if __name__ == "__main__":
     #         )
 
     # def validate(it):
+    #     # fix time steps
     #     sum_loss, sum_loss_pos, sum_loss_v, sum_n = 0, 0, 0, 0
     #     all_pred_v, all_true_v = [], []
     #     with torch.no_grad():
