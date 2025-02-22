@@ -94,7 +94,7 @@ if __name__ == "__main__":
     train_set, val_set = subsets["train"], subsets["test"]
     logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
-    print(train_set[0][0].protein_is_backbone)
+    print(train_set[0][0].protein_atom_name)
     # collate_exclude_keys = ["ligand_nbh_list"]
     # train_iterator = utils_train.inf_iterator(
     #     DataLoader(
