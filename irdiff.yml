@@ -1,4 +1,4 @@
-name: irdiff_new
+name: irdiff
 channels:
   - pytorch
   - pyg
