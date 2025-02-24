@@ -5,7 +5,7 @@ from glob import glob
 
 
 if __name__ == "__main__":
-    eval_path = "./path/to/eval_results/"
+    eval_path = "./eval_results/"
     results_fn_list = glob(os.path.join(eval_path, "metrics_*.pt"))
     print("num of results.pt: ", len(results_fn_list))
     docking_mode = "vina_score"

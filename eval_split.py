@@ -13,6 +13,9 @@ from utils.evaluation import eval_atom_type, scoring_func, analyze, eval_bond_le
 from utils import misc, reconstruct, transforms
 from utils.evaluation.docking_qvina import QVinaDockingTask
 from utils.evaluation.docking_vina import VinaDockingTask
+import warnings
+warnings.filterwarnings("ignore")
+
 
 
 def print_dict(d, logger):
@@ -36,7 +39,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     root_dir = "./"
     parser.add_argument(
-        "--sample_path", default=os.path.join(root_dir, "sampled_results"), type=str
+        "--sample_path", default=os.path.join(root_dir, "sampled_results_old/"), type=str
     )
     parser.add_argument("--verbose", type=eval, default=False)
     parser.add_argument("--eval_step", type=int, default=-1)
@@ -44,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_end_index", type=int, default=99)
     parser.add_argument("--save", type=eval, default=True)
     parser.add_argument(
-        "--protein_root", type=str, default="/path/to/crossdocked_v1.1_rmsd1.0"
+        "--protein_root", type=str, default="./path/to/test_set/"
     )
     parser.add_argument("--atom_enc_mode", type=str, default="add_aromatic")
     parser.add_argument(

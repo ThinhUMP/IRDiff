@@ -1,4 +1,4 @@
-name: irdiff
+name: irdiff_new
 channels:
   - pytorch
   - pyg
@@ -227,7 +227,7 @@ dependencies:
   - zlib=1.2.12=h166bdaf_1
   - zstd=1.4.9=ha95c52a_0
   - pip:
-    - autodocktools-py3==0+unknown
+    # - autodocktools-py3==0+unknown
     - meeko==0.1.dev3
     - mmcif-pdbx==2.0.1
     - pdb2pqr==3.6.1

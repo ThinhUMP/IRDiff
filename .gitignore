@@ -4,3 +4,4 @@ eval_results/
 */__pycache__/
 sampled_results/
 tmp/
+sampled_results_old/
