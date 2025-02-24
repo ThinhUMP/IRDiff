@@ -166,7 +166,7 @@ if __name__ == "__main__":
     #             raise ValueError(topk_prompt)
 
     #         gt_protein_pos = batch.protein_pos
-            
+
     #         # -------- start: diffusion loss --------
     #         results = model.get_diffusion_loss(
     #             net_cond=net_cond,
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     #     for it in range(1, config.train.max_iters + 1):
     #         # with torch.autograd.detect_anomaly():
     #         train(it)
-            
+
     #         if it % config.train.val_freq == 0 or it == config.train.max_iters:
     #             val_loss = validate(it)
     #             if best_loss is None or val_loss < best_loss:

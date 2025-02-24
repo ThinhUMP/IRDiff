@@ -77,6 +77,3 @@ class CrossAttention(nn.Module):
 
         out = einsum("b i j, b j d -> b i d", attn, v)
         return self.to_out(out) + x
-    
-
-

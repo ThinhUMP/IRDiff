@@ -1,5 +1,4 @@
 from openbabel import pybel
-from openbabel import openbabel
 from meeko import MoleculePreparation
 from meeko import obutils
 from vina import Vina
@@ -14,67 +13,18 @@ import contextlib
 from utils.reconstruct import reconstruct_from_generated
 from utils.evaluation.docking_qvina import get_random_id, BaseDockingTask
 import warnings
+
 warnings.filterwarnings("ignore")
+
 
 def supress_stdout(func):
     def wrapper(*a, **ka):
         with open(os.devnull, "w") as devnull:
             with contextlib.redirect_stdout(devnull):
                 return func(*a, **ka)
+
     return wrapper
 
-def convert_sdf_to_pdbqt(input_file, output_file):
-    # Initialize Open Babel conversion objects
-    obConversion = openbabel.OBConversion()
-    obConversion.SetInAndOutFormats("sdf", "pdbqt")
-
-    # Create a new molecule
-    mol = openbabel.OBMol()
-
-    # Read the molecule from file
-    if not obConversion.ReadFile(mol, input_file):
-        print("Failed to read the input file")
-        return
-
-    # Add hydrogens
-    mol.AddHydrogens()
-
-    # Assign charges using Gasteiger-Marsili (simple charge model)
-    mol.AddPolarHydrogens()
-    charge_model = openbabel.OBChargeModel.FindType("gasteiger")
-    if charge_model:
-        charge_model.ComputeCharges(mol)
-    return obConversion.WriteFile(mol, output_file)
-
-def convert_pdb_to_pdbqt(input_file, output_file):
-    # Initialize Open Babel conversion objects
-    obConversion = openbabel.OBConversion()
-    obConversion.SetInAndOutFormats("pdb", "pdbqt")
-
-    # Create a new molecule
-    mol = openbabel.OBMol()
-
-    # Read the molecule from file
-    if not obConversion.ReadFile(mol, input_file):
-        print("Failed to read the input file")
-        return
-
-    # Add hydrogens
-    mol.AddHydrogens()
-
-    # Optionally, add polar hydrogens only if dealing with a protein
-    # mol.AddPolarHydrogens()
-
-    # Assign charges using Gasteiger-Marsili (simple charge model)
-    charge_model = openbabel.OBChargeModel.FindType("gasteiger")
-    if charge_model:
-        charge_model.ComputeCharges(mol)
-
-    # Write the molecule to output file
-    try: 
-        return obConversion.WriteFile(mol, output_file)
-    except Exception as e:
-        print('pdb to pdbqt got an error', e)
 
 class PrepLig(object):
     def __init__(self, input_mol, mol_format):
@@ -100,7 +50,7 @@ class PrepLig(object):
     def get_pdbqt(self, lig_pdbqt=None):
         preparator = MoleculePreparation()
         preparator.prepare(self.ob_mol.OBMol)
-        
+
         if lig_pdbqt is not None:
             preparator.write_pdbqt_file(lig_pdbqt)
             return
@@ -201,9 +151,9 @@ class VinaDock(object):
         v = Vina(sf_name=score_func, seed=seed, verbosity=0, **kwargs)
         v.set_receptor(self.prot_pdbqt)
         v.set_ligand_from_file(self.lig_pdbqt)
-        
+
         v.compute_vina_maps(center=self.pocket_center, box_size=self.box_size)
-        
+
         if mode == "score_only":
             score = v.score()[0]
         elif mode == "minimize":

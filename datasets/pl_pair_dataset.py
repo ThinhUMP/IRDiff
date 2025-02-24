@@ -22,7 +22,7 @@ class PocketLigandPairDataset(Dataset):
         self.db = None
 
         self.keys = None
-        
+
         if not os.path.exists(self.processed_path):
             print(f"{self.processed_path} does not exist, begin processing data")
             self._process()

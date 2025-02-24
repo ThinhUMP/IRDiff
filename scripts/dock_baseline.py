@@ -54,7 +54,9 @@ def dock_pocket_samples(pocket_samples):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--sample_path", type=str, default="./tmp/aaagatwwtznqqlfcbozrwhcenfgmvf_ligand.sdf"
+        "--sample_path",
+        type=str,
+        default="./tmp/aaagatwwtznqqlfcbozrwhcenfgmvf_ligand.sdf",
     )
     parser.add_argument("-o", "--out", type=str, default=None)
     parser.add_argument("-n", "--num_processes", type=int, default=10)
