@@ -281,16 +281,12 @@ class VinaDockingTask(BaseDockingTask):
 
         lig = PrepLig(self.ligand_path, "sdf")
         lig.get_pdbqt(lig_pdbqt=ligand_pdbqt)
-        # if not os.path.exists(ligand_pdbqt):
-        #     convert_sdf_to_pdbqt(self.ligand_path, ligand_pdbqt)
 
         prot = PrepProt(self.receptor_path)
         if not os.path.exists(protein_pqr):
             prot.addH(protein_pqr)
         if not os.path.exists(protein_pdbqt):
             prot.get_pdbqt(protein_pdbqt)
-        # if not os.path.exists(protein_pdbqt):
-        #     convert_pdb_to_pdbqt(ligand_pdbqt, protein_pdbqt)
 
         dock = VinaDock(ligand_pdbqt, protein_pdbqt)
         dock.pocket_center, dock.box_size = self.center, [

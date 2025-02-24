@@ -13,9 +13,9 @@ from utils.evaluation import eval_atom_type, scoring_func, analyze, eval_bond_le
 from utils import misc, reconstruct, transforms
 from utils.evaluation.docking_qvina import QVinaDockingTask
 from utils.evaluation.docking_vina import VinaDockingTask
-import warnings
+# import warnings
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 
 def print_dict(d, logger):

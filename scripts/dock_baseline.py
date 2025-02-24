@@ -15,6 +15,7 @@ import multiprocessing as mp
 
 
 def dock_pocket_samples(pocket_samples):
+    print(pocket_samples[0]["ligand_filename"])
     ligand_fn = pocket_samples[0]["ligand_filename"]
     print("Start docking pocket: %s" % ligand_fn)
     pocket_results = []
@@ -56,12 +57,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample_path",
         type=str,
-        default="./tmp/aaagatwwtznqqlfcbozrwhcenfgmvf_ligand.sdf",
+        default="./sampled_results_old/result_0.pt",
     )
     parser.add_argument("-o", "--out", type=str, default=None)
-    parser.add_argument("-n", "--num_processes", type=int, default=10)
+    parser.add_argument("-n", "--num_processes", type=int, default=24)
     parser.add_argument(
-        "--protein_root", type=str, default="./data/crossdocked_v1.1_rmsd1.0"
+        "--protein_root", type=str, default="./path/to/test_set/ABL2_HUMAN_274_551_0/4xli_B_rec.pdb"
     )
     parser.add_argument("--dock_size_factor", type=float, default=None)
     parser.add_argument("--exhaustiveness", type=int, default=16)
