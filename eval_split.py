@@ -53,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--docking_mode",
         type=str,
-        default="vina_dock",
+        default="none",
         choices=["qvina", "vina_score", "vina_dock", "none"],
     )
     parser.add_argument("--exhaustiveness", type=int, default=16)
@@ -212,7 +212,6 @@ if __name__ == "__main__":
         "complete": fraction_complete,
     }
     print_dict(validity_dict, logger)
-
     c_bond_length_profile = eval_bond_length.get_bond_length_profile(all_bond_dist)
     c_bond_length_dict = eval_bond_length.eval_bond_length_profile(
         c_bond_length_profile
