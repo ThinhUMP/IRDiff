@@ -8,6 +8,8 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 import pickle
 import argparse
+from collections import defaultdict
+from utils.evaluation.docking_vina import VinaDockingTask
 
 def main():
     parser = argparse.ArgumentParser()
@@ -17,7 +19,8 @@ def main():
         type=str,
     )
     parser.add_argument("--calculate_diversity", type=bool, default=True) # This process will cost an amount of computational resources
-    parser.add_argument("--n_jobs", type=int, default=8)
+    parser.add_argument("--n_jobs", type=int, default=60)
+    parser.add_argument("--protein_root", type=str, default="./path/to/test_set/")
     args = parser.parse_args()
 
     eval_path = "./eval_results/"
@@ -83,28 +86,64 @@ def main():
     #         vina_dock_all_mean,
     #         vina_dock_all_median,
     #     )
+    test_ligand_name = []
+    if args.calculate_diversity: 
+        for r in result_i:
+            test_ligand_name.append(r['ligand_filename'])
+        test_ligand_name = list(set(test_ligand_name))
+    # print(len(test_ligand_name))
+    #     diversity = []
+    #     for ligand_name in tqdm(test_ligand_name):
+    #         mols = []
+    #         for r in result_i:
+    #             if r['ligand_filename'] == ligand_name:
+    #                 mols.append(r['mol'])
+    #         average_smi = tanimoto_parallel(args, mols)
+    #         diversity.append(average_smi)
+    # print('Mean diversity', 1-np.mean(diversity), 'Median diversity', 1-np.median(diversity))
 
     if args.calculate_diversity: 
-        # molecules = [result_i[i]['mol'] for i in range(len(result_i))]
+        high_affinity = []
+        for ligand_name in tqdm(test_ligand_name):
+            vina_dock_list = []
+            docking_results = None
+            for r in result_i:
+                if r['ligand_filename'] == ligand_name:
+                    vina_dock_list.append(r['vina']['dock'][0]['affinity'])
+                    if docking_results is None:
+                        supplier = Chem.SDMolSupplier(os.path.join(args.protein_root, ligand_name))
+                        mol = next(supplier, None)
+                        vina_task = VinaDockingTask.from_generated_mol(
+                                mol, ligand_name, protein_root=args.protein_root
+                            )
+                        docking_results = vina_task.run(
+                                    mode="dock", exhaustiveness=16
+                                )
+            high_affinity.append(sum(vina_dock_list<docking_results[0]['affinity'])/len(vina_dock_list))
+    print('High affinity', np.mean(high_affinity), 'High affinity', np.median(high_affinity))
+    #         average_smi = tanimoto_parallel(args, mols)
+    #         diversity.append(average_smi)
+    # print('Mean diversity', 1-np.mean(diversity), 'Median diversity', 1-np.median(diversity))
 
-        # num_molecules = len(molecules)
-        # tasks = [(molecules[i], molecules[j]) for i in range(num_molecules) for j in range(num_molecules)]
+def tanimoto_parallel(args, molecules):
+    num_molecules = len(molecules)
+    tasks = [(molecules[i], molecules[j]) for i in range(num_molecules) for j in range(num_molecules)]
 
-        # # Parallel computation of Tanimoto similarity
-        # n_jobs = args.n_jobs
-        # with Parallel(n_jobs=n_jobs) as parallel:
-        #     results = parallel(delayed(tanimoto_sim)(mol1, mol2) for mol1, mol2 in tqdm(tasks))
-
+    # Parallel computation of Tanimoto similarity
+    n_jobs = args.n_jobs
+    with Parallel(n_jobs=n_jobs) as parallel:
+        results = parallel(delayed(tanimoto_sim)(mol1, mol2) for mol1, mol2 in tasks)
+    return np.mean(results)
         # print("Average Tanimoto Similarity:", np.mean(results), "Mean Tanimoto Similarity", np.mean(results))
 
         # Save results
         # with open('./eval_results/tanimoto_similarity_results.pkl', 'wb') as f:
         #     pickle.dump(results, f)
         # Load the results from the saved file
-        with open('./eval_results/tanimoto_similarity_results.pkl', 'rb') as f:
-            loaded_results = pickle.load(f)
+        # with open('./eval_results/tanimoto_similarity_results.pkl', 'rb') as f:
+        #     loaded_results = pickle.load(f)
 
-        print("Loaded Tanimoto Similarities:", np.mean(loaded_results), np.median(loaded_results))
+        # print("Loaded Tanimoto Similarities:", np.mean(loaded_results), np.median(loaded_results))
 
 if __name__=='__main__':
     main()
