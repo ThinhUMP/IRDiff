@@ -41,7 +41,7 @@ if __name__ == "__main__":
     root_dir = "./"
     parser.add_argument(
         "--sample_path",
-        default=os.path.join(root_dir, "sampled_results_old/"),
+        default=os.path.join(root_dir, "sampled_results/"),
         type=str,
     )
     parser.add_argument("--verbose", type=eval, default=False)
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--docking_mode",
         type=str,
-        default="none",
+        default="vina_dock",
         choices=["qvina", "vina_score", "vina_dock", "none"],
     )
     parser.add_argument("--exhaustiveness", type=int, default=16)
