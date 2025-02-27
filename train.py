@@ -67,8 +67,8 @@ if __name__ == "__main__":
     vis_dir = os.path.join(log_dir, "vis")
     os.makedirs(vis_dir, exist_ok=True)
     logger = misc.get_logger("train", log_dir)
-    # logger.info(args)
-    # logger.info(config)
+    logger.info(args)
+    logger.info(config)
     shutil.copyfile(args.config, os.path.join(log_dir, os.path.basename(args.config)))
     shutil.copytree(root_dir + "/models", os.path.join(log_dir, "models"))
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     # Datasets and loaders
     # -------- start: config dataloader --------
-    # logger.info("Loading dataset...")
+    logger.info("Loading dataset...")
 
     subsets = get_topk_promt_dataset(
         config=config.data,
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     topk_prompt = config.data.topk_prompt
 
     train_set, val_set = subsets["train"], subsets["test"]
-    # logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
+    logger.info(f"Training: {len(train_set)} Validation: {len(val_set)}")
 
     collate_exclude_keys = ["ligand_nbh_list"]
     train_iterator = utils_train.inf_iterator(
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     # -------- start: build model --------
     # Model
-    # logger.info("Building model...")
+    logger.info("Building model...")
 
     net_cond = BAPNet(
         ckpt_path=config.net_cond.ckpt_path, hidden_nf=config.net_cond.hidden_dim
@@ -338,27 +338,26 @@ if __name__ == "__main__":
         for it in range(1, config.train.max_iters + 1):
             # with torch.autograd.detect_anomaly():
             train(it)
-            break
-            # if it % config.train.val_freq == 0 or it == config.train.max_iters:
-            #     val_loss = validate(it)
-            #     if best_loss is None or val_loss < best_loss:
-            #         logger.info(f"[Validate] Best val loss achieved: {val_loss:.6f}")
-            #         best_loss, best_iter = val_loss, it
-            #         ckpt_path = os.path.join(ckpt_dir, "%d.pt" % it)
-            #         torch.save(
-            #             {
-            #                 "config": config,
-            #                 "model": model.state_dict(),
-            #                 "optimizer": optimizer.state_dict(),
-            #                 "scheduler": scheduler.state_dict(),
-            #                 "iteration": it,
-            #             },
-            #             ckpt_path,
-            #         )
-            #     else:
-            #         logger.info(
-            #             f"[Validate] Val loss is not improved. "
-            #             f"Best val loss: {best_loss:.6f} at iter {best_iter}"
-            #         )
+            if it % config.train.val_freq == 0 or it == config.train.max_iters:
+                val_loss = validate(it)
+                if best_loss is None or val_loss < best_loss:
+                    logger.info(f"[Validate] Best val loss achieved: {val_loss:.6f}")
+                    best_loss, best_iter = val_loss, it
+                    ckpt_path = os.path.join(ckpt_dir, "%d.pt" % it)
+                    torch.save(
+                        {
+                            "config": config,
+                            "model": model.state_dict(),
+                            "optimizer": optimizer.state_dict(),
+                            "scheduler": scheduler.state_dict(),
+                            "iteration": it,
+                        },
+                        ckpt_path,
+                    )
+                else:
+                    logger.info(
+                        f"[Validate] Val loss is not improved. "
+                        f"Best val loss: {best_loss:.6f} at iter {best_iter}"
+                    )
     except KeyboardInterrupt:
         logger.info("Terminating...")
