@@ -379,6 +379,7 @@ class ScorePosNet3D(nn.Module):
         hbap_protein_aug = self.emb_mlp_aug(
             torch.cat([h_protein, hbap_protein.detach()], dim=1)
         )
+
         hbap_ligand_aug = self.emb_mlp_aug(
             torch.cat([init_ligand_h, hbap_ligand.detach()], dim=1)
         )
@@ -477,6 +478,7 @@ class ScorePosNet3D(nn.Module):
         hbap_ligand_aug_list = []
         for bi in range(batch_size):
             hbap_ligand_aug_i = hbap_ligand_aug_batch[bi][: valid_num_atom_list[bi]]
+
             hbap_ligand_aug_list.append(hbap_ligand_aug_i)
         hbap_ligand_aug = torch.cat(hbap_ligand_aug_list, dim=0).to(
             hbap_ligand_aug.device

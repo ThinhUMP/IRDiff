@@ -62,7 +62,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out", type=str, default=None)
     parser.add_argument("-n", "--num_processes", type=int, default=24)
     parser.add_argument(
-        "--protein_root", type=str, default="./path/to/test_set/ABL2_HUMAN_274_551_0/4xli_B_rec.pdb"
+        "--protein_root",
+        type=str,
+        default="./path/to/test_set/ABL2_HUMAN_274_551_0/4xli_B_rec.pdb",
     )
     parser.add_argument("--dock_size_factor", type=float, default=None)
     parser.add_argument("--exhaustiveness", type=int, default=16)

@@ -1,12 +1,10 @@
 import numpy as np
 from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem
+
 
 def tanimoto_sim(mol, ref):
     fp1 = Chem.RDKFingerprint(ref)
     fp2 = Chem.RDKFingerprint(mol)
-    # fp1 = AllChem.GetMorganFingerprint(mol, 2)
-    # fp2 = AllChem.GetMorganFingerprint(ref, 2)
     return DataStructs.TanimotoSimilarity(fp1, fp2)
 
 
