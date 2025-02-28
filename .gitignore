@@ -8,3 +8,6 @@ sampled_results_old/
 test.py
 */*/__pycache__/
 eval_results_old/
+eval_results_retrained_1/
+sampled_results_retrained_1/
+pretrained_models/pretrained-IRDiff_1.pt
