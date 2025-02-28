@@ -683,6 +683,7 @@ class ScorePosNet3D(nn.Module):
         time_step=None,
     ):
         num_graphs = batch_protein.max().item() + 1
+        # Center of mass of protein, ligand, prompting references
         protein_pos, ligand_pos, _ = center_pos(
             protein_pos,
             ligand_pos,
@@ -730,12 +731,15 @@ class ScorePosNet3D(nn.Module):
                 mode=self.center_pos_mode,
             )
 
+        #Sample diffusion time
         if time_step is None:
             time_step, pt = self.sample_time(
                 num_graphs, protein_pos.device, self.sample_time_method
             )
         else:
             pt = torch.ones_like(time_step).float() / self.num_timesteps
+        
+        #Perturb
         a = self.alphas_cumprod.index_select(0, time_step)  # (num_graphs, )
 
         a_pos = a[batch_ligand].unsqueeze(-1)  # (num_ligand_atoms, 1)
