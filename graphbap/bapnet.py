@@ -279,7 +279,7 @@ class BAPNet(nn.Module):
         ).to(device)
 
         lig_atom_type = lig_a_hidx  # index for atom types
-        pocket_atom_type = pocket_a_hidx  # index for residue types
+        pocket_atom_type = pocket_a_hidx  # index for atom types
         pocket_residue_type = pocket_r_hidx  # index for residue types
 
         complexes_id_emb = self.id_embed(complexes_id)

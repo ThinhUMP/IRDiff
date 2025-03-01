@@ -346,7 +346,9 @@ class ScorePosNet3D(nn.Module):
     ):
 
         batch_size = batch_protein.max().item() + 1
+        #Vt
         init_ligand_v = F.one_hot(init_ligand_v, self.num_classes).float()
+        #time_emb_dim = 0
         if self.time_emb_dim > 0:
             if self.time_emb_mode == "simple":
                 input_ligand_feat = torch.cat(
@@ -364,9 +366,11 @@ class ScorePosNet3D(nn.Module):
         else:
             input_ligand_feat = init_ligand_v
 
-        h_protein = self.protein_atom_emb(protein_v)
-        init_ligand_h = self.ligand_atom_emb(input_ligand_feat)
+        # Node_indicator = True > emb_dim = 127. Embed V_t into H_M^0 , and embed V_P into H_P^0
+        h_protein = self.protein_atom_emb(protein_v) #H_P^0 = MLP(V_P)
+        init_ligand_h = self.ligand_atom_emb(input_ligand_feat) #H_M^0 = MLP(V_t)
 
+        # In training, hbap_protein and hbap_ligand are not None > pass
         if hbap_protein is None:
             hbap_protein = torch.zeros([h_protein.shape[0], self.cond_dim]).to(
                 h_protein.device
@@ -376,22 +380,25 @@ class ScorePosNet3D(nn.Module):
                 init_ligand_h.device
             )
 
+        #  Get H_P^' and H_M^'
         hbap_protein_aug = self.emb_mlp_aug(
             torch.cat([h_protein, hbap_protein.detach()], dim=1)
-        )
+        ) # H_P^' = MLP([H_P^0, Int_P])
 
         hbap_ligand_aug = self.emb_mlp_aug(
             torch.cat([init_ligand_h, hbap_ligand.detach()], dim=1)
-        )
+        ) # H_M^' = MLP([H_M^0, Int_M])
 
-        protein_prompt_list = [hbap_protein_aug]
+        # Protein prompting lists with each element has a shape of [protein atoms, 128]
+        protein_prompt_list = [hbap_protein_aug] #H_P
         if prompt_hbap_protein is not None:
-            protein_prompt_list.append(prompt_hbap_protein)
+            protein_prompt_list.append(prompt_hbap_protein) #Int_Pprompt1
         if prompt_hbap_protein_2 is not None:
-            protein_prompt_list.append(prompt_hbap_protein_2)
+            protein_prompt_list.append(prompt_hbap_protein_2) #Int_Pprompt2
         if prompt_hbap_protein_3 is not None:
-            protein_prompt_list.append(prompt_hbap_protein_3)
+            protein_prompt_list.append(prompt_hbap_protein_3) #Int_Pprompt3
 
+        # H_P^'' = MLP([#H_P^', #Int_Pprompt1, #Int_Pprompt2, #Int_Pprompt3]) > [protein atoms, 128]
         hbap_protein_aug = self.prompt_protein_mlp(
             torch.cat(protein_prompt_list, dim=1)
         )
@@ -480,10 +487,12 @@ class ScorePosNet3D(nn.Module):
             hbap_ligand_aug_i = hbap_ligand_aug_batch[bi][: valid_num_atom_list[bi]]
 
             hbap_ligand_aug_list.append(hbap_ligand_aug_i)
+        # Get H_M^'' = hbap_ligand_aug
         hbap_ligand_aug = torch.cat(hbap_ligand_aug_list, dim=0).to(
             hbap_ligand_aug.device
         )
 
+        #3D Equivariant Molecular Diffusion to predict [X^0, V^0] from [X_t, H_M^''] and [X_P , H_P^'']
         h_protein = self.emb_mlp(
             torch.cat([h_protein, hbap_protein, hbap_protein_aug], dim=1)
         )
@@ -697,7 +706,7 @@ class ScorePosNet3D(nn.Module):
             and (prompt_ligand_v is not None)
             and (prompt_batch_ligand is not None)
         ):
-            prompt_protein_pos, prompt_ligand_pos, _ = center_pos(
+            _, prompt_ligand_pos, _ = center_pos(
                 protein_pos,
                 prompt_ligand_pos,
                 batch_protein,
@@ -710,7 +719,7 @@ class ScorePosNet3D(nn.Module):
             and (prompt_ligand_v_2 is not None)
             and (prompt_batch_ligand_2 is not None)
         ):
-            prompt_protein_pos_2, prompt_ligand_pos_2, _ = center_pos(
+            _, prompt_ligand_pos_2, _ = center_pos(
                 protein_pos,
                 prompt_ligand_pos_2,
                 batch_protein,
@@ -723,7 +732,7 @@ class ScorePosNet3D(nn.Module):
             and (prompt_ligand_v_3 is not None)
             and (prompt_batch_ligand_3 is not None)
         ):
-            prompt_protein_pos_3, prompt_ligand_pos_3, _ = center_pos(
+            _, prompt_ligand_pos_3, _ = center_pos(
                 protein_pos,
                 prompt_ligand_pos_3,
                 batch_protein,
@@ -739,16 +748,18 @@ class ScorePosNet3D(nn.Module):
         else:
             pt = torch.ones_like(time_step).float() / self.num_timesteps
         
-        #Perturb
+        #Perturb [X0, V0] to obtain [Xt, Vt]
         a = self.alphas_cumprod.index_select(0, time_step)  # (num_graphs, )
 
         a_pos = a[batch_ligand].unsqueeze(-1)  # (num_ligand_atoms, 1)
         pos_noise = torch.zeros_like(ligand_pos)
         pos_noise.normal_()
+        # Xt
         ligand_pos_perturbed = (
             a_pos.sqrt() * ligand_pos + (1.0 - a_pos).sqrt() * pos_noise
         )  # pos_noise * std
         log_ligand_v0 = index_to_log_onehot(ligand_v, self.num_classes)
+        # Vt
         ligand_v_perturbed, log_ligand_vt = self.q_v_sample(
             log_ligand_v0, time_step, batch_ligand
         )
@@ -767,8 +778,8 @@ class ScorePosNet3D(nn.Module):
 
         gt_protein_v = protein_v
         gt_protein_pos = protein_pos
-        gt_protein_a_h = torch.argmax(gt_protein_v[:, :6], dim=1)
-        gt_protein_r_h = torch.argmax(gt_protein_v[:, 6:26], dim=1)
+        gt_protein_a_h = torch.argmax(gt_protein_v[:, :6], dim=1) #atom features
+        gt_protein_r_h = torch.argmax(gt_protein_v[:, 6:26], dim=1) #residue features
 
         if self.model_mean_type == "noise":
             pass
@@ -777,6 +788,7 @@ class ScorePosNet3D(nn.Module):
             gt_ligand_pos = ligand_pos
             gt_lig_a_h = gt_ligand_v
 
+            # Extract IntM, IntP by PMINet
             hbap_ligand, hbap_protein = net_cond.extract_features(
                 gt_ligand_pos,
                 gt_protein_pos,
@@ -800,6 +812,7 @@ class ScorePosNet3D(nn.Module):
         prompt_hbap_ligand_3 = None
         prompt_hbap_protein_3 = None
 
+        #Extract IntPrompt1, IntP_Prompt1 by PMINet
         if (
             (prompt_ligand_pos is not None)
             and (prompt_ligand_v is not None)
@@ -816,6 +829,7 @@ class ScorePosNet3D(nn.Module):
                 batch_protein,
             )
 
+        #Extract IntPrompt2, IntP_Prompt2 by PMINet
         if (
             (prompt_ligand_pos_2 is not None)
             and (prompt_ligand_v_2 is not None)
@@ -832,6 +846,7 @@ class ScorePosNet3D(nn.Module):
                 batch_protein,
             )
 
+        #Extract IntPrompt3, IntP_Prompt3 by PMINet
         if (
             (prompt_ligand_pos_3 is not None)
             and (prompt_ligand_v_3 is not None)
@@ -849,12 +864,13 @@ class ScorePosNet3D(nn.Module):
             )
 
         # 3. forward-pass NN, feed perturbed pos and v, output noise
+        # Predict [X^0, V^0] from [X_t, H_M^''] and [X_P , H_P^'']
         preds = self(
             protein_pos=protein_pos,
             protein_v=protein_v,
             batch_protein=batch_protein,
-            init_ligand_pos=ligand_pos_perturbed,
-            init_ligand_v=ligand_v_perturbed,
+            init_ligand_pos=ligand_pos_perturbed, #Xt
+            init_ligand_v=ligand_v_perturbed, #Vt
             batch_ligand=batch_ligand,
             time_step=time_step,
             hbap_protein=hbap_protein,
@@ -868,12 +884,14 @@ class ScorePosNet3D(nn.Module):
             prompt_hbap_protein_3=prompt_hbap_protein_3,
             prompt_hbap_ligand_3=prompt_hbap_ligand_3,
             prompt_batch_ligand_3=prompt_batch_ligand_3,
-        )
+        ) #forward
 
         pred_ligand_pos, pred_ligand_v = (
             preds["pred_ligand_pos"],
             preds["pred_ligand_v"],
         )
+        
+        # Compute loss
         pred_pos_noise = pred_ligand_pos - ligand_pos_perturbed
         if self.model_mean_type == "noise":
             pos0_from_e = self._predict_x0_from_eps(
