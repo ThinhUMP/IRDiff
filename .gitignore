@@ -10,4 +10,5 @@ test.py
 eval_results_old/
 eval_results_retrained_1/
 sampled_results_retrained_1/
+sampled_results_retrained_2/
 pretrained_models/pretrained-IRDiff_1.pt

@@ -231,7 +231,7 @@ def main():
     parser.add_argument("--protein_root", type=str, default="./path/to/test_set/")
     args = parser.parse_args()
 
-    eval_path = "./eval_results/"
+    eval_path = "./eval_results"
     results_fn_list = load_results(eval_path)
     for rfn in results_fn_list:
         results = torch.load(rfn)["all_results"]

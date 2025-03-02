@@ -198,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda:1")
     parser.add_argument("--batch_size", type=int, default=25)
     parser.add_argument(
-        "--result_path", type=str, default=root_dir + "/sampled_results"
+        "--result_path", type=str, default=root_dir + "/sampled_results_retrained_2/"
     )
     parser.add_argument(
         "--test_prompt_indices_path",
