@@ -195,10 +195,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train_config", type=str, default=root_dir + "/configs/training.yml"
     )
-    parser.add_argument("--device", type=str, default="cuda:1")
+    parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--batch_size", type=int, default=25)
     parser.add_argument(
-        "--result_path", type=str, default=root_dir + "/sampled_results_retrained_2/"
+        "--result_path", type=str, default=root_dir + "/sampled_results_test/"
     )
     parser.add_argument(
         "--test_prompt_indices_path",
